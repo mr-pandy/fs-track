@@ -1,115 +1,73 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Note from "./components/Note";
+import noteService from "./services/notes";
 
-const Header = ({ course }) => {
-  return (
-    <>
-      <h1>{course.name}</h1>
-    </>
-  );
-};
-
-const Content = ({ course }) => {
-  return (
-    <div>
-      {course.parts.map((part) => (
-        <p key={part.name}>
-          {part.name} : {part.exercises}
-        </p>
-      ))}
-    </div>
-  );
-};
-
-const Total = ({ course }) => {
-  const totalExercises = course.parts.reduce(
-    (accumulator, part) => accumulator + part.exercises,
-    0
-  );
-
-  return <p>Number of exercises: {totalExercises}</p>;
-};
-const Display = ({ counter }) => {
-  return <div>{counter}</div>;
-};
-
-const Button = ({ resetToZero, increaseByOne, decreaseByOne }) => {
-  return (
-    <div>
-      <button onClick={decreaseByOne}>-</button>
-      <button onClick={resetToZero}>reset(0)</button>
-      <button onClick={increaseByOne}>+</button>
-    </div>
-  );
-};
 const App = () => {
-  const [clicks, setClicks] = useState({
-    left: 0,
-    right: 0,
-  });
-  const [counter, setCounter] = useState(0);
+  const [notes, setNotes] = useState([]);
+  const [newNote, setNewNote] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
-  const handleLeftClick = () => {
-    const newClicks = {
-      ...clicks,
-      left: clicks.left + 1,
+  useEffect(() => {
+    noteService.getAll().then((initialNotes) => {
+      setNotes(initialNotes);
+    });
+  }, []);
+
+  const addNote = (event) => {
+    event.preventDefault();
+    const noteObject = {
+      content: newNote,
+      important: Math.random() > 0.5,
     };
-    setClicks(newClicks);
-  };
-  const handleRightClick = () => {
-    const newClicks = {
-      ...clicks,
-      right: clicks.right + 1,
-    };
-    setClicks(newClicks);
-  };
-  const increaseByOne = () => {
-    setCounter(counter + 1);
-  };
-  const decreaseByOne = () => {
-    setCounter(counter - 1);
-  };
-  const setToZero = () => {
-    setCounter(0);
-  };
-  const course = {
-    name: "Half Stack application development",
-    parts: [
-      {
-        name: "Fundamentals of React",
-        exercises: 10,
-      },
-      {
-        name: "Using props to pass data",
-        exercises: 7,
-      },
-      {
-        name: "State of a component",
-        exercises: 14,
-      },
-    ],
+
+    noteService.create(noteObject).then((returnedNote) => {
+      setNotes(notes.concat(returnedNote));
+      setNewNote("");
+    });
   };
 
-  console.log("rendering...", counter);
+  const toggleImportanceOf = (id) => {
+    const note = notes.find((n) => n.id === id);
+    const changedNote = { ...note, important: !note.important };
+
+    noteService
+      .update(id, changedNote)
+      .then((returnedNote) => {
+        setNotes(notes.map((note) => (note.id !== id ? note : returnedNote)));
+      })
+      .catch((error) => {
+        alert(`the note '${note.content}' was already deleted from server`);
+        setNotes(notes.filter((n) => n.id !== id));
+      });
+  };
+
+  const handleNoteChange = (event) => {
+    setNewNote(event.target.value);
+  };
+
+  const notesToShow = showAll ? notes : notes.filter((note) => note.important);
 
   return (
     <div>
-      <Header course={course} />
-      <Content course={course} />
-      <Total course={course} />
-
-      <Display counter={counter} />
-      <Button
-        increaseByOne={increaseByOne}
-        decreaseByOne={decreaseByOne}
-        resetToZero={setToZero}
-      />
-
+      <h1>Notes</h1>
       <div>
-        {clicks.left}
-        <button onClick={() => setClicks(handleLeftClick)}>left</button>
-        <button onClick={() => setClicks(handleRightClick)}>right</button>
-        {clicks.right}
+        <button onClick={() => setShowAll(!showAll)}>
+          show {showAll ? "important" : "all"}
+        </button>
       </div>
+      <ul>
+        {notesToShow.map((note) => (
+          <Note
+            key={note.id}
+            note={note}
+            toggleImportance={() => toggleImportanceOf(note.id)}
+          />
+        ))}
+      </ul>
+      <form onSubmit={addNote}>
+        <input value={newNote} onChange={handleNoteChange} />
+        <button type="submit">save</button>
+      </form>
     </div>
   );
 };
