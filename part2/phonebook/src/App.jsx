@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import contactService from "./services/contacts";
+import Notifications from "./components/Notifications";
 
 const Filter = (props) => {
   const { getName, filterName } = props;
@@ -51,6 +52,7 @@ function App() {
   const [newNumber, setNewNumber] = useState("");
   const [getName, setGetName] = useState("");
   const [filteredPersons, setFilteredPersons] = useState([]);
+  const [notMsg, setNotMsg] = useState("Notification");
 
   useEffect(() => {
     contactService.getAllContacts().then((response) => {
@@ -76,6 +78,10 @@ function App() {
       await contactService.createContact(newContact).then((response) => {
         setPersons([...persons, response]);
         setFilteredPersons([...filteredPersons, response]);
+        setNotMsg(`Added ${response.name}`);
+        setTimeout(() => {
+          setNotMsg(null);
+        }, 3000);
         setNewName("");
         setNewNumber("");
       });
@@ -115,7 +121,12 @@ function App() {
         const updatedContact = persons.filter(
           (person) => person.id !== idToRemove
         );
-        console.log("deleted: ", id);
+        setNotMsg(`Deleted ${getIdOfContact.name}`);
+        setTimeout(() => {
+          setNotMsg(null);
+        }, 3000);
+        setNewName("");
+        setNewNumber("");
         setPersons(updatedContact);
         setFilteredPersons(updatedContact);
       } catch (error) {
@@ -128,6 +139,7 @@ function App() {
     <div>
       <h2>Phonebook</h2>
 
+      <Notifications message={notMsg} />
       <Filter getName={getName} filterName={filterName} />
 
       <h3>Add a new</h3>
